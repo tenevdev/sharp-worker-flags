@@ -141,7 +141,7 @@ namespace WorkerFlags
 
         public CustomFlagParser(Func<Option<string>, WorkerFlagAttribute, T> parser)
         {
-            parser = parser;
+            this.parser = parser;
         }
 
         public object Parse(Option<string> value, WorkerFlagAttribute metadata)
