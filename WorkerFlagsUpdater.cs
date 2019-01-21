@@ -8,8 +8,7 @@ namespace WorkerFlags
 {
     public class WorkerFlagsUpdater
     {
-        private readonly IDictionary<string, WorkerFlagAttribute> flagNameToMetadata = new Dictionary<string, WorkerFlagAttribute>();
-        private readonly IDictionary<string, Tuple<object, PropertyInfo>> flagNameToProp = new Dictionary<string, Tuple<object, PropertyInfo>>();
+        private readonly IDictionary<string, ICollection<WorkerFlagAttribute>> flagNameToMetadata = new Dictionary<string, ICollection<WorkerFlagAttribute>>();
         private readonly IDictionary<string, IWorkerFlagParser> flagNameToParser = new Dictionary<string, IWorkerFlagParser>();
 
         private static readonly IDictionary<Type, IWorkerFlagParser> DefaultParsers = new Dictionary<Type, IWorkerFlagParser>()
@@ -34,8 +33,16 @@ namespace WorkerFlags
             {
                 foreach (WorkerFlagAttribute workerFlag in propertyInfo.GetCustomAttributes(typeof(WorkerFlagAttribute), false))
                 {
-                    flagNameToProp[workerFlag.Name] = Tuple.Create((object)container, propertyInfo);
-                    flagNameToMetadata[workerFlag.Name] = workerFlag;
+                    workerFlag.Object = container;
+                    workerFlag.PropertyInfo = propertyInfo;
+
+                    // This is the first time we see this flag so initialise the collections for it
+                    if (!flagNameToMetadata.ContainsKey(workerFlag.Name))
+                    {
+                        flagNameToMetadata[workerFlag.Name] = new System.Collections.Generic.List<WorkerFlagAttribute>();
+                    }
+
+                    flagNameToMetadata[workerFlag.Name].Add(workerFlag);
 
                     if (flagNameToParser.ContainsKey(workerFlag.Name))
                     {
@@ -92,10 +99,10 @@ namespace WorkerFlags
         /// <param name="update">Dispatcher callback flag update</param>
         public void OnFlagUpdate(FlagUpdateOp update)
         {
-            var flagProp = flagNameToProp[update.Name];
-            var obj = flagProp.Item1;
-            var propertyInfo = flagProp.Item2;
-            propertyInfo.SetValue(obj, flagNameToParser[update.Name].Parse(update.Value, flagNameToMetadata[update.Name]));
+            foreach (var flagProp in flagNameToMetadata[update.Name])
+            {
+                flagProp.PropertyInfo.SetValue(flagProp.Object, flagNameToParser[update.Name].Parse(update.Value, flagProp));
+            }
         }
     }
 
@@ -109,6 +116,9 @@ namespace WorkerFlags
 
         public string Name { get; set; }
         public object DefaultValue { get; set; }
+
+        public object Object { get; set; }
+        public PropertyInfo PropertyInfo { get; set; }
     }
 
     public interface IWorkerFlagParser
