@@ -68,7 +68,7 @@ namespace Example
 
 ## To do
 
-  - Update multiple properties based on the same flag name
+  - ~~Update multiple properties based on the same flag name~~ (Done)
   - Generate worker flags JSON definitions from attributes
   - Add default and included parsers to cover more use cases
   - Compare performance to hand-crafted flag updates (no reflection)
